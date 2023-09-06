@@ -1,161 +1,155 @@
 paper.install(window);
+
 window.onload = function() {
     paper.setup(document.getElementById('myCanvas'));
 
+    // Variables
     let tool = new Tool();
     let path;
-    let segment;  // Variable to hold the segment being dragged
-    let editMode = false;  // Flag to indicate whether we're in edit mode
+    let segment;
+    let editMode = false;
+    let selectMode = false;
+    let selectedPath = null;
+    let segmentIndicators = [];
+    let animatedPath;
+    let offset = 0;
 
-    function showSegmentIndicators() {
-        if (path) {
-            for (let seg of path.segments) {
+    // Functions for Selection
+    window.toggleSelectMode = function() {
+        selectMode = !selectMode;
+        if (selectedPath) {
+            selectedPath.selected = false;
+            selectedPath = null;
+        }
+    }
+
+    // Functions for Editing
+    window.toggleEditMode = function() {
+        editMode = !editMode;
+        if (editMode && selectedPath) {
+            showSegmentIndicators(selectedPath);
+        } else {
+            clearSegmentIndicators();
+        }
+    }
+
+    function showSegmentIndicators(targetPath) {
+        if (targetPath) {
+            for (let seg of targetPath.segments) {
                 let indicator = new paper.Path.Circle({
                     center: seg.point,
                     radius: 5,
                     fillColor: 'red'
                 });
+                segmentIndicators.push(indicator);
             }
         }
     }
 
-    tool.onMouseDown = function(event) {
-        if (editMode) {
-            if (path) {
-                let hitResult = path.hitTest(event.point, {
-                    segments: true,
-                    tolerance: 5
-                });
-
-                if (hitResult && hitResult.type === 'segment') {
-                    segment = hitResult.segment;
-                }
-            }
-        } else {
-            if (path) {
-                path.selected = false;  // Deselect the current path
-            }
-            path = new paper.Path();
-            path.strokeColor = 'black';
-            path.add(event.point);
-        }
+    function clearSegmentIndicators() {
+        segmentIndicators.forEach(indicator => indicator.remove());
+        segmentIndicators = [];
     }
 
-    tool.onMouseDrag = function(event) {
-        if (editMode && segment) {
-            // Move the segment
-            segment.point = segment.point.add(event.delta);
-    
-            // Update the corresponding segment indicator's position
-            let index = path.segments.indexOf(segment);
-            if (index !== -1 && segmentIndicators[index]) {
-                segmentIndicators[index].position = segment.point;
-            }
-        } else if (!editMode) {
-            path.add(event.point);
-        }
-    }
-    
-
-    tool.onMouseUp = function(event) {
-        segment = null;  // Reset segment on mouse up
-    }
-
-    let segmentIndicators = [];  // Array to store segment indicators
-
-function showSegmentIndicators() {
-    if (path) {
-        for (let seg of path.segments) {
-            let indicator = new paper.Path.Circle({
-                center: seg.point,
-                radius: 5,
-                fillColor: 'red'
-            });
-            segmentIndicators.push(indicator);
-        }
-    }
-}
-
-    window.toggleEditMode = function() {
-        editMode = !editMode;
-        if (editMode) {
-            showSegmentIndicators();
-        } else {
-            // Remove segment indicators when exiting edit mode
-            segmentIndicators.forEach(indicator => indicator.remove());
-            segmentIndicators = [];  // Reset the segmentIndicators array
-        }
-    }
-    
-
-    window.saveSVG = function() {
-        let svg = path.exportSVG({asString: true});
-        let blob = new Blob([svg], {type: "image/svg+xml"});
-        let url = URL.createObjectURL(blob);
-        let a = document.createElement("a");
-        a.href = url;
-        a.download = "path.svg";
-        a.click();
-    }
-
-    let animatedPath; // Declare it outside to access it across calls
-    let pathsToAnimate; // Array to store paths that need to be animated
-    let offset = 0;    // Starting offset for the animation
-    
+    // Functions for Animation
     window.animatePath = function() {
-        // Remove previous animated path if it exists
         if (animatedPath) {
             animatedPath.remove();
         }
-    
-        // Reset offset
         offset = 0;
-    
-        // Get all paths on the canvas
-        pathsToAnimate = paper.project.activeLayer.children.filter(child => child instanceof paper.Path && child !== animatedPath);
-        
-        // Start the animation sequence
-        animateNextPath();
+        let pathsToAnimate = paper.project.activeLayer.children.filter(child => child instanceof paper.Path && child !== animatedPath);
+        animateNextPath(pathsToAnimate);
     }
-    
-    
-    function animateNextPath() {
-        // Check if there are paths left to animate
+
+    function animateNextPath(pathsToAnimate) {
         if (pathsToAnimate.length === 0) return;
-    
-        // Reset for the new path
         offset = 0;
-        let currentPath = pathsToAnimate.shift(); // Get the next path and remove it from the array
+        let currentPath = pathsToAnimate.shift();
         currentPath.strokeColor = 'transparent';
-        
         animatedPath = new paper.Path();
         animatedPath.strokeColor = 'black';
         animatedPath.strokeWidth = currentPath.strokeWidth;
-    
+
         paper.view.onFrame = function(event) {
-            offset += 2;  // Controls the speed of the animation. Adjust as needed.
+            offset += 2;
             if (offset > currentPath.length) {
-                paper.view.onFrame = null;  // Stop the onFrame loop for the current path
-                animateNextPath();  // Recursively call to animate the next path
+                paper.view.onFrame = null;
+                animateNextPath(pathsToAnimate);
                 return;
             }
             let point = currentPath.getPointAt(offset);
             animatedPath.add(point);
         };
     }
-    
 
+    // Functions for Path Simplification
     window.simplifyPath = function() {
-        if (path) {
-            path.simplify(2.5);  // The value is the tolerance; adjust as needed
+        if (selectedPath) {
+            selectedPath.simplify(2.5);
             if (editMode) {
-                // Clear existing segment indicators
-                segmentIndicators.forEach(indicator => indicator.remove());
-                segmentIndicators = [];
-                // Show new segment indicators for the simplified path
-                showSegmentIndicators();
+                clearSegmentIndicators();
+                showSegmentIndicators(selectedPath);
             }
         }
     }
-    
-} //end window.onload
+
+    // Mouse events
+    tool.onMouseDown = function(event) {
+        if (selectMode) {
+            let hitResult = paper.project.hitTest(event.point, {
+                fill: true,
+                stroke: true,
+                tolerance: 5
+            });
+            if (hitResult && hitResult.item instanceof paper.Path) {
+                if (selectedPath) {
+                    selectedPath.selected = false;
+                }
+                selectedPath = hitResult.item;
+                selectedPath.selected = true;
+            }
+        } else if (editMode && selectedPath) {
+            let hitResult = selectedPath.hitTest(event.point, {
+                segments: true,
+                tolerance: 5
+            });
+            if (hitResult && hitResult.type === 'segment') {
+                segment = hitResult.segment;
+            }
+        } else {
+            path = new paper.Path({
+                segments: [event.point],
+                strokeColor: 'black'
+            });
+        }
+    }
+
+    tool.onMouseDrag = function(event) {
+        if (editMode && segment) {
+            segment.point = segment.point.add(event.delta);
+            let index = selectedPath.segments.indexOf(segment);
+            if (index !== -1 && segmentIndicators[index]) {
+                segmentIndicators[index].position = segment.point;
+            }
+        } else if (!editMode && !selectMode) {
+            path.add(event.point);
+        }
+    }
+
+    tool.onMouseUp = function(event) {
+        segment = null;
+    }
+
+    // Function to Save as SVG
+    window.saveSVG = function() {
+        if (selectedPath) {
+            let svg = selectedPath.exportSVG({ asString: true });
+            let blob = new Blob([svg], { type: "image/svg+xml" });
+            let url = URL.createObjectURL(blob);
+            let a = document.createElement("a");
+            a.href = url;
+            a.download = "path.svg";
+            a.click();
+        }
+    }
+}
