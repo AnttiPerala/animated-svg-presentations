@@ -19,10 +19,22 @@
         <button onclick="deleteSelectedPath()">Delete Path</button>
         <button onclick="saveSVG()">Save as SVG</button>
         <button onclick="animatePath()">Animate Path</button>
+        <span id="slideNumber">Slide: 0 / 0</span>
+
+        <button onclick="createNewSlide()">New Slide</button>
+        <button onclick="navigateSlide(-1)">Previous Slide</button>
+        <button onclick="navigateSlide(1)">Next Slide</button>
+
+
     </div>
 
-    <canvas id="myCanvas" resize="true" style="border:1px solid black;"></canvas>
+    <div id="slideContainer">
+        <!-- The canvas and other slide elements will be inside this container -->
+        <canvas id="myCanvas" resize="true" style="border:1px solid black;"></canvas>
+      </div>
+
    
+   <script src="slides.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

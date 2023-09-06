@@ -4,7 +4,9 @@ window.onload = function() {
     paper.setup(document.getElementById('myCanvas'));
 
     // Variables
-    let tool = new Tool();
+    // Declare slide as a global variable
+    let slide;
+    let tool = new Tool(slide);
     let path;
     let segment;
     let editMode = false;
@@ -211,8 +213,23 @@ function clearBoundingBox() {
     
     
 
-    tool.onMouseUp = function(event) {
-        segment = null;  // Clear the segment reference on mouse up
+    tool.onMouseUp = function (event) {
+        createNewPath(event);
+    };
+    
+
+    function createNewPath(event) {
+        if (currentSlideIndex !== -1) {
+            let newPath = new paper.Path();
+            newPath.strokeColor = 'black';
+            newPath.add(event.downPoint); // Use the initial mouse down point
+    
+            // Store the path data in the current slide's 'paths' property
+            slides[currentSlideIndex].paths.push(newPath.exportJSON());
+    
+            // Render the current slide to display the new path
+            renderSlide(slides[currentSlideIndex]);
+        }
     }
     
 
