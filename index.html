@@ -10,6 +10,9 @@
 <body>
 
     <div id="ui-container">
+        <label for="thicknessSlider">Path Thickness:</label>
+<input type="range" id="thicknessSlider" min="1" max="10" value="1" onchange="setPathThickness(this.value)">
+
         <button onclick="toggleSelectMode()">Select Mode</button>
         <button onclick="toggleEditMode()">Edit Mode</button>
         <button onclick="simplifyPath()">Simplify Path</button>

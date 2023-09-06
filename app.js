@@ -13,6 +13,8 @@ window.onload = function() {
     let segmentIndicators = [];
     let animatedPath;
     let offset = 0;
+    let pathThickness = 1;  // Default thickness value, you can change this to any desired value
+
 
 // Set initial canvas dimensions
 paper.view.viewSize = new paper.Size(document.getElementById('myCanvas').clientWidth, document.getElementById('myCanvas').clientHeight);
@@ -24,6 +26,17 @@ window.addEventListener('resize', function() {
     
     paper.view.viewSize = new paper.Size(window.innerWidth, window.innerHeight);
 
+
+    window.setPathThickness = function(thickness) {
+        if (selectedPath) {
+            selectedPath.strokeWidth = thickness;
+            paper.view.draw();  // Refresh the view to reflect the changes
+        } else {
+            pathThickness = thickness;
+        }
+    }
+    
+    
 
     window.toggleSelectMode = function() {
         selectMode = !selectMode;
@@ -74,13 +87,14 @@ function clearBoundingBox() {
                 let indicator = new paper.Path.Circle({
                     center: seg.point,
                     radius: 5,
-                    fillColor: 'red'
+                    fillColor: 'red',
+                    data: { isSegmentIndicator: true }  // Tag the segment indicator
                 });
                 segmentIndicators.push(indicator);
             }
         }
     }
-
+    
     function clearSegmentIndicators() {
         segmentIndicators.forEach(indicator => indicator.remove());
         segmentIndicators = [];
@@ -136,35 +150,46 @@ function clearBoundingBox() {
     // Mouse events
     tool.onMouseDown = function(event) {
         if (editMode && selectedPath) {
-            let hitResult = selectedPath.hitTest(event.point, {
+            let segmentHitResult = selectedPath.hitTest(event.point, {
                 segments: true,
                 tolerance: 5
             });
-            if (hitResult && hitResult.type === 'segment') {
-                segment = hitResult.segment;  // Store the segment for use in onMouseDrag
-                return;  // Exit the function here to prevent further logic execution
+            if (segmentHitResult && segmentHitResult.type === 'segment') {
+                segment = segmentHitResult.segment;
+                return;  // Exit early if we found a segment in edit mode
             }
         }
     
-        if (selectMode) {
-            let hitResult = paper.project.hitTest(event.point, {
-                fill: true,
-                stroke: true,
-                tolerance: 5
-            });
-            if (hitResult && hitResult.item instanceof paper.Path) {
+        let hitResult = paper.project.hitTest(event.point, {
+            fill: true,
+            stroke: true,
+            tolerance: 5
+        });
+        
+        // Check if the mouse clicked on a path but not on a segment indicator
+        if (hitResult && hitResult.item instanceof paper.Path && !hitResult.item.data.isSegmentIndicator) {
+            if (selectMode) {
                 if (selectedPath) {
                     clearBoundingBox();
                     selectedPath.selected = false;
                 }
                 selectedPath = hitResult.item;
-                showBoundingBox(selectedPath); 
+                showBoundingBox(selectedPath);
             }
         } else {
-            path = new paper.Path({
-                segments: [event.point],
-                strokeColor: 'black'
-            });
+            // Mouse clicked on an empty area
+            if (selectedPath) {
+                clearBoundingBox();
+                selectedPath.selected = false;
+                selectedPath = null;
+            }
+            if (!editMode && !selectMode) {
+                path = new paper.Path({
+                    segments: [event.point],
+                    strokeColor: 'black',
+                    strokeWidth: pathThickness
+                });
+            }
         }
     }
     
