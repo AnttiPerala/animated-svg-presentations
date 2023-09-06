@@ -1,0 +1,15 @@
+body {
+    margin: 0;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+#ui-container {
+    flex: 0 0 10vh;  /* This reserves 10vh space for the UI container */
+}
+
+canvas {
+    flex: 1; /* This will make the canvas take the rest of the available space */
+}
