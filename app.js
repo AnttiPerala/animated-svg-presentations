@@ -25,6 +25,8 @@ window.onload = function() {
     let animatedPath;
     let offset = 0;
     let pathThickness = 1;  // Default thickness value, you can change this to any desired value
+    let animationSpeed = 1;
+    let animationOrder = 1;
 
 
 // Set initial canvas dimensions
@@ -62,17 +64,19 @@ window.addEventListener('resize', function() {
 
     let boundingBox = null; // Variable to hold the bounding box
 
-function showBoundingBox(targetPath) {
-    if (targetPath) {
-        clearBoundingBox(); // Clear any existing bounding box
-
-        // Create a rectangle from the bounds of the selected path
-        boundingBox = new paper.Path.Rectangle(targetPath.bounds);
-        boundingBox.strokeColor = 'blue';
-        boundingBox.strokeWidth = 2;
-        boundingBox.dashArray = [10, 4];  // Dashed line style for the bounding box
+    function showBoundingBox(targetPath) {
+        if (targetPath) {
+            clearBoundingBox(); // Clear any existing bounding box
+    
+            // Create a rectangle from the bounds of the selected path
+            boundingBox = new paper.Path.Rectangle(targetPath.bounds);
+            boundingBox.strokeColor = 'blue';
+            boundingBox.strokeWidth = 2;
+            boundingBox.dashArray = [10, 4];  // Dashed line style for the bounding box
+            boundingBox.data.boundingBox = true;  // This tags the path as a bounding box
+        }
     }
-}
+    
 
 function clearBoundingBox() {
     if (boundingBox) {
@@ -99,12 +103,16 @@ function clearBoundingBox() {
                     center: seg.point,
                     radius: 5,
                     fillColor: 'red',
-                    data: { isSegmentIndicator: true }  // Tag the segment indicator
+                    data: { 
+                        isSegmentIndicator: true,
+                        boundingBox: true  // This tags the segment indicators as bounding boxes too, to prevent their animation
+                    }
                 });
                 segmentIndicators.push(indicator);
             }
         }
     }
+    
     
     function clearSegmentIndicators() {
         segmentIndicators.forEach(indicator => indicator.remove());
@@ -117,14 +125,23 @@ function clearBoundingBox() {
             animatedPath.remove();
         }
         offset = 0;
-        let pathsToAnimate = paper.project.activeLayer.children.filter(child => child instanceof paper.Path && child !== animatedPath);
+        let pathsToAnimate = paper.project.activeLayer.children.filter(child => 
+            child instanceof paper.Path && 
+            child !== animatedPath &&
+            (!child.data || !child.data.boundingBox)  // Ensure we don't animate bounding boxes or segment indicators
+        );
         animateNextPath(pathsToAnimate);
     }
-
+    
     function animateNextPath(pathsToAnimate) {
         if (pathsToAnimate.length === 0) return;
         offset = 0;
         let currentPath = pathsToAnimate.shift();
+    
+        while(currentPath.data && currentPath.data.boundingBox && pathsToAnimate.length > 0) {
+            // Skip bounding boxes
+            currentPath = pathsToAnimate.shift();
+        }
         
         // Ensure the current path is not selected
         currentPath.selected = false;
@@ -133,11 +150,14 @@ function clearBoundingBox() {
         animatedPath = new paper.Path();
         animatedPath.strokeColor = 'black';
         animatedPath.strokeWidth = currentPath.strokeWidth;
+        animatedPath.selected = false;  // Ensure the animated path is not selected
     
         paper.view.onFrame = function(event) {
-            offset += 2;
+            offset += currentPath.animationSpeed || 2;  // Use the speed from the path, or default to 2 if it's not set
             if (offset > currentPath.length) {
                 paper.view.onFrame = null;
+                currentPath.selected = false;  // Ensure the original path remains deselected
+                animatedPath.selected = false;  // Deselect after finishing animation
                 animateNextPath(pathsToAnimate);
                 return;
             }
@@ -146,7 +166,8 @@ function clearBoundingBox() {
         };
     }
     
-
+    
+    
     // Functions for Path Simplification
     window.simplifyPath = function() {
         if (selectedPath) {
@@ -157,69 +178,77 @@ function clearBoundingBox() {
             }
         }
     }
-
-    // Mouse events
-    tool.onMouseDown = function(event) {
-        if (editMode && selectedPath) {
-            let segmentHitResult = selectedPath.hitTest(event.point, {
-                segments: true,
-                tolerance: 5
-            });
-            if (segmentHitResult && segmentHitResult.type === 'segment') {
-                segment = segmentHitResult.segment;
-                return;  // Exit early if we found a segment in edit mode
-            }
-        }
-    
-        let hitResult = paper.project.hitTest(event.point, {
-            fill: true,
-            stroke: true,
+// Mouse events
+tool.onMouseDown = function(event) {
+    if (editMode && selectedPath) {
+        let segmentHitResult = selectedPath.hitTest(event.point, {
+            segments: true,
             tolerance: 5
         });
-        
-        // Check if the mouse clicked on a path but not on a segment indicator
-        if (hitResult && hitResult.item instanceof paper.Path && !hitResult.item.data.isSegmentIndicator) {
-            if (selectMode) {
-                if (selectedPath) {
-                    clearBoundingBox();
-                    selectedPath.selected = false;
-                }
-                selectedPath = hitResult.item;
-                showBoundingBox(selectedPath);
-            }
-        } else {
-            // Mouse clicked on an empty area
+        if (segmentHitResult && segmentHitResult.type === 'segment') {
+            segment = segmentHitResult.segment;
+            return;  // Exit early if we found a segment in edit mode
+        }
+    }
+
+    let hitResult = paper.project.hitTest(event.point, {
+        fill: true,
+        stroke: true,
+        tolerance: 5
+    });
+    
+    // Check if the mouse clicked on a path but not on a segment indicator
+    if (hitResult && hitResult.item instanceof paper.Path && !hitResult.item.data.isSegmentIndicator) {
+        if (selectMode) {
             if (selectedPath) {
                 clearBoundingBox();
                 selectedPath.selected = false;
-                selectedPath = null;
             }
-            if (!editMode && !selectMode) {
-                path = new paper.Path({
-                    segments: [event.point],
-                    strokeColor: 'black',
-                    strokeWidth: pathThickness
-                });
-            }
+            selectedPath = hitResult.item;
+            showBoundingBox(selectedPath);
+        }
+    } else {
+        // Mouse clicked on an empty area
+        if (selectedPath) {
+            clearBoundingBox();
+            selectedPath.selected = false;
+            selectedPath = null;
+        }
+        if (!editMode && !selectMode) {
+            path = new paper.Path({
+                segments: [event.point],
+                strokeColor: 'black',
+                strokeWidth: pathThickness,
+                animationSpeed: animationSpeed,  // Ensure you have animationSpeed defined somewhere
+                animationOrder: animationOrder  // Ensure you have animationOrder defined somewhere
+            });
         }
     }
-    
-    
+}
 
-    tool.onMouseDrag = function(event) {
-        if (editMode && segment) {
-            segment.point = segment.point.add(event.delta);  // Move the segment
-            
-            // Update the corresponding segment indicator's position
-            let index = selectedPath.segments.indexOf(segment);
-            if (index !== -1 && segmentIndicators[index]) {
-                segmentIndicators[index].position = segment.point;
-            }
-        } else if (!editMode && !selectMode) {
-            path.add(event.point);
-        }
+function setAnimationOrder() {
+    if (selectedPath) {
+        selectedPath.animationOrder = parseInt(document.getElementById('animationOrderInput').value);
+    } else {
+        // If no path is selected, set a global animation order for future paths
+        animationOrder = parseInt(document.getElementById('animationOrderInput').value);  
     }
-    
+}
+
+tool.onMouseDrag = function(event) {
+    if (editMode && segment) {
+        segment.point = segment.point.add(event.delta);  // Move the segment
+        
+        // Update the corresponding segment indicator's position
+        let index = selectedPath.segments.indexOf(segment);
+        if (index !== -1 && segmentIndicators[index]) {
+            segmentIndicators[index].position = segment.point;
+        }
+    } else if (!editMode && !selectMode && path) {  // Added an additional check for path
+        path.add(event.point);
+    }
+}
+
     
 
     tool.onMouseUp = function (event) {
@@ -269,6 +298,18 @@ function clearBoundingBox() {
             selectedPath = null;
         }
     }
+
+
+    window.updateAnimationSpeed = function(value) {
+        if (selectedPath) {
+            selectedPath.animationSpeed = parseFloat(value);
+        }
+    };
     
+    window.updateAnimationOrder = function(value) {
+        if (selectedPath) {
+            selectedPath.animationOrder = parseInt(value, 10);
+        }
+    };
     
 }/* End window onload */
