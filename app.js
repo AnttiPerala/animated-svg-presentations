@@ -217,18 +217,15 @@ function clearBoundingBox() {
         createNewPath(event);
     };
     
-
-    function createNewPath(event) {
-        if (currentSlideIndex !== -1) {
-            let newPath = new paper.Path();
-            newPath.strokeColor = 'black';
-            newPath.add(event.downPoint); // Use the initial mouse down point
-    
+    function createNewPath() {
+        if (currentSlideIndex !== -1 && path) {
             // Store the path data in the current slide's 'paths' property
-            slides[currentSlideIndex].paths.push(newPath.exportJSON());
+            slides[currentSlideIndex].paths.push(path.exportJSON());
     
             // Render the current slide to display the new path
             renderSlide(slides[currentSlideIndex]);
+    
+            path = null;  // Reset the path variable
         }
     }
     
