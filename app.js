@@ -41,11 +41,6 @@ window.onload = function() {
     let animationSpeed = 1;
     let animationOrder = 1;
     let initialClickPoint = null;  // Store the initial point of mouse down for rotation
-    let isDragging = false;
-    let pathCreated = false;  // Add this at the beginning of the window.onload function
-    let isNewPath = false;
-
-
 
 // Set initial canvas dimensions
 paper.view.viewSize = new paper.Size(document.getElementById('myCanvas').clientWidth, document.getElementById('myCanvas').clientHeight);
@@ -209,9 +204,6 @@ function clearBoundingBox() {
     }
 // Mouse events
 tool.onMouseDown = function(event) {
-    pathCreated = false;  // Reset the flag
-
-    // Check for edit mode and segment interactions
     if (editMode && selectedPath) {
         let segmentHitResult = selectedPath.hitTest(event.point, {
             segments: true,
@@ -223,32 +215,18 @@ tool.onMouseDown = function(event) {
         }
     }
 
-    if (!editMode && !selectMode) {
-        isNewPath = true;  // This indicates the path is new
-        path = new paper.Path({
-            segments: [event.point],
-            strokeColor: 'black',
-            strokeWidth: pathThickness,
-            data: {
-                animationSpeed: animationSpeed,
-                animationOrder: animationOrder
-            }
-        });
-    }
-
-    // Determine if the click is within the bounding box of the selected path
-    if (selectedPath && selectedPath.bounds.contains(event.point)) {
-        initialClickPoint = event.point;  // Store the initial click point for movement calculations
-        return;  // Exit early to keep the selection and prepare for potential movement
-    }
-
-    // Check for path selection or de-selection
     let hitResult = paper.project.hitTest(event.point, {
         fill: true,
         stroke: true,
         tolerance: 5
     });
 
+    //for moving around
+    if (selectedPath) {
+        initialClickPoint = event.point;
+    }
+    
+    // Check if the mouse clicked on a path but not on a segment indicator
     if (hitResult && hitResult.item instanceof paper.Path && !hitResult.item.data.isSegmentIndicator) {
         if (selectMode) {
             if (selectedPath) {
@@ -259,7 +237,7 @@ tool.onMouseDown = function(event) {
             showBoundingBox(selectedPath);
         }
     } else {
-        // Mouse clicked on an empty area, de-select path
+        // Mouse clicked on an empty area
         if (selectedPath) {
             clearBoundingBox();
             selectedPath.selected = false;
@@ -279,52 +257,6 @@ tool.onMouseDown = function(event) {
     }
 }
 
-
-tool.onMouseDrag = function(event) {
-    isDragging = true;
-
-    // Handle movement of the selected path
-    if (selectedPath && initialClickPoint) {
-        let moveVector = event.point.subtract(initialClickPoint);
-        selectedPath.position = selectedPath.position.add(moveVector);
-        showBoundingBox(selectedPath);  // Update the bounding box
-        initialClickPoint = event.point;  // Update the initial click point for the next drag event
-        return;  // Exit early after moving the path
-    }
-
-    // Handle segment dragging in edit mode
-    if (editMode && segment) {
-        segment.point = segment.point.add(event.delta);  // Move the segment
-        
-        // Update the corresponding segment indicator's position
-        let index = selectedPath.segments.indexOf(segment);
-        if (index !== -1 && segmentIndicators[index]) {
-            segmentIndicators[index].position = segment.point;
-        }
-    }
-    
-    // Check if we're dragging a selected path in select mode
-    if (selectMode && selectedPath && !editMode) {
-        updatePathInCurrentSlide(selectedPath);
-    } else if (!editMode && !selectMode && path) {  
-        path.add(event.point);
-    }
-}
-
-
-tool.onMouseUp = function(event) {
-    isDragging = false;
-    initialClickPoint = null;  // Reset the initial click point after the drag operation
-    
-    if (selectedPath) {
-        updatePathInCurrentSlide(selectedPath);
-    }
-
-    if (pathCreated) {
-        createNewPath(event);
-    }
-}
-
 function setAnimationOrder() {
     if (selectedPath) {
         selectedPath.animationOrder = parseInt(document.getElementById('animationOrderInput').value);
@@ -333,35 +265,42 @@ function setAnimationOrder() {
         animationOrder = parseInt(document.getElementById('animationOrderInput').value);  
     }
 }
-function createNewPath(event) {
-    if (currentSlideIndex !== -1 && path) {
-        // Generate a unique identifier (timestamp)
-        let uniqueId = Date.now().toString();
 
-        // Store the unique identifier in the path's data
-        path.data.uniqueId = uniqueId;
-
-        // Check if a path with the same unique identifier already exists
-        let existingPathIndex = slides[currentSlideIndex].paths.findIndex(pathData => {
-            let testPath = new paper.Path();
-            testPath.importJSON(pathData);
-            return testPath.data.uniqueId === uniqueId;
-        });
-
-        // Only add the path if it doesn't already exist
-        if (existingPathIndex === -1) {
-            slides[currentSlideIndex].paths.push(path.exportJSON());
+tool.onMouseDrag = function(event) {
+       // If a path is selected and we're not in edit mode, move the path
+       if (selectedPath && !editMode) {
+        selectedPath.position = selectedPath.position.add(event.delta);
+    }
+    if (editMode && segment) {
+        segment.point = segment.point.add(event.delta);  // Move the segment
+        
+        // Update the corresponding segment indicator's position
+        let index = selectedPath.segments.indexOf(segment);
+        if (index !== -1 && segmentIndicators[index]) {
+            segmentIndicators[index].position = segment.point;
         }
-
-        // Render the current slide to display the new path
-        renderSlide(slides[currentSlideIndex]);
-
-        path = null;  // Reset the path variable
+    } else if (!editMode && !selectMode && path) {  // Added an additional check for path
+        path.add(event.point);
     }
 }
 
+    
 
-
+    tool.onMouseUp = function (event) {
+        createNewPath(event);
+    };
+    
+    function createNewPath() {
+        if (currentSlideIndex !== -1 && path) {
+            // Store the path data in the current slide's 'paths' property
+            slides[currentSlideIndex].paths.push(path.exportJSON());
+    
+            // Render the current slide to display the new path
+            renderSlide(slides[currentSlideIndex]);
+    
+            path = null;  // Reset the path variable
+        }
+    }
     
 
     // Function to Save as SVG
@@ -424,25 +363,6 @@ function createNewPath(event) {
         }
     }
     
-    function updatePathInCurrentSlide(updatedPath) {
-        if (currentSlideIndex !== -1) {
-            // Find the index of the path that matches the selected path in the current slide's paths
-            let pathIndex = slides[currentSlideIndex].paths.findIndex(pathData => {
-                let testPath = new paper.Path();
-                testPath.importJSON(pathData);
-                return testPath.id === updatedPath.id;
-            });
-            
-            // Update the path data in the current slide's 'paths' property
-            if (pathIndex !== -1) {
-                slides[currentSlideIndex].paths[pathIndex] = updatedPath.exportJSON();
-            } else {
-                // If the path isn't found (which shouldn't happen but just to be safe), add it to the slide's paths
-                slides[currentSlideIndex].paths.push(updatedPath.exportJSON());
-            }
-        }
-    }
-    
-    
+ 
     
 }/* End window onload */
