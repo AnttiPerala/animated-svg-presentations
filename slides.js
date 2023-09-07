@@ -172,3 +172,28 @@ window.removeBackgroundImage = function() {
         console.log("No active slide.");
     }
 };
+
+
+function handleSVGInput(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            importSVGIntoCanvas(e.target.result);
+        };
+        reader.readAsText(file);
+    }
+}
+
+
+function importSVGIntoCanvas(svgContent) {
+    paper.project.importSVG(svgContent, {
+        expandShapes: false,
+        onLoad: function(item) {
+            // If you want to perform any operations on the imported SVG item, you can do so here
+        },
+        onError: function(message) {
+            console.error(message);
+        }
+    });
+}
