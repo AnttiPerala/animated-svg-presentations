@@ -6,6 +6,19 @@ window.onload = function() {
   window.backgroundLayer = new paper.Layer();
   window.pathsLayer = new paper.Layer();
   paper.project.activeLayer = window.pathsLayer;  // Set the active layer to pathsLayer
+
+  document.getElementById('animationSpeedSlider').addEventListener('input', function() {
+    let speedValue = this.value;
+    document.getElementById('animationSpeedDisplay').textContent = speedValue;
+    console.log("Setting animation speed to:", speedValue);
+
+    if (selectedPath) {
+        selectedPath.data.animationSpeed = parseFloat(speedValue);
+    } else {
+        animationSpeed = parseFloat(speedValue);  // default for new paths
+    }
+});
+
   
   // Initialize with one slide if there are no slides
   if (slides.length === 0) {
@@ -130,8 +143,23 @@ function clearBoundingBox() {
             child !== animatedPath &&
             (!child.data || !child.data.boundingBox)  // Ensure we don't animate bounding boxes or segment indicators
         );
+    
+        // Check if the path has animationSpeed defined, else set a default value
+        pathsToAnimate.forEach(p => {
+            if (!p.data || p.data.animationSpeed === undefined) {
+                if (!p.data) p.data = {};
+                p.data.animationSpeed = 2;  // You can set this to your default speed
+            }
+        });
+
+        pathsToAnimate.forEach(p => {
+            console.log("Path animation speed:", p.data.animationSpeed);
+        });
+        
+    
         animateNextPath(pathsToAnimate);
     }
+    
     
     function animateNextPath(pathsToAnimate) {
         if (pathsToAnimate.length === 0) return;
@@ -214,8 +242,10 @@ tool.onMouseDown = function(event) {
                 segments: [event.point],
                 strokeColor: 'black',
                 strokeWidth: pathThickness,
-                animationSpeed: animationSpeed,  // Ensure you have animationSpeed defined somewhere
-                animationOrder: animationOrder  // Ensure you have animationOrder defined somewhere
+                data: {
+                    animationSpeed: animationSpeed,
+                    animationOrder: animationOrder
+                }
             });
         }
     }
@@ -309,5 +339,20 @@ tool.onMouseDrag = function(event) {
             selectedPath.animationOrder = parseInt(value, 10);
         }
     };
+
+    window.updateAnimationSpeedDisplay = function() {
+        let speedValue = document.getElementById('animationSpeedSlider').value;
+
+        document.getElementById('animationSpeedDisplay').textContent = speedValue;
+    
+        if (selectedPath) {
+            selectedPath.data.animationSpeed = parseFloat(speedValue);
+
+        } else {
+            animationSpeed = parseFloat(speedValue);  // default for new paths
+        }
+    }
+    
+ 
     
 }/* End window onload */
