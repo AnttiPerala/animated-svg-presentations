@@ -40,7 +40,7 @@ window.onload = function() {
     let pathThickness = 1;  // Default thickness value, you can change this to any desired value
     let animationSpeed = 1;
     let animationOrder = 1;
-
+    let initialClickPoint = null;  // Store the initial point of mouse down for rotation
 
 // Set initial canvas dimensions
 paper.view.viewSize = new paper.Size(document.getElementById('myCanvas').clientWidth, document.getElementById('myCanvas').clientHeight);
@@ -220,6 +220,11 @@ tool.onMouseDown = function(event) {
         stroke: true,
         tolerance: 5
     });
+
+    //for moving around
+    if (selectedPath) {
+        initialClickPoint = event.point;
+    }
     
     // Check if the mouse clicked on a path but not on a segment indicator
     if (hitResult && hitResult.item instanceof paper.Path && !hitResult.item.data.isSegmentIndicator) {
@@ -262,6 +267,10 @@ function setAnimationOrder() {
 }
 
 tool.onMouseDrag = function(event) {
+       // If a path is selected and we're not in edit mode, move the path
+       if (selectedPath && !editMode) {
+        selectedPath.position = selectedPath.position.add(event.delta);
+    }
     if (editMode && segment) {
         segment.point = segment.point.add(event.delta);  // Move the segment
         
