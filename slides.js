@@ -1,6 +1,9 @@
 let slides = [];
 
-let currentSlideIndex = -1;
+window.currentSlideIndex = -1;
+
+let currentSlide = null;  // Initialize the currentSlide variable
+
 
 function updateSlideNumberDisplay() {
     let slideNumberElement = document.getElementById("slideNumber");
@@ -16,7 +19,7 @@ function createNewSlide() {
     };
 
     slides.push(newSlide);
-    currentSlideIndex = slides.length - 1;
+    currentSlide = newSlide;  // Set the current slide to the newly created slide
 
     renderSlide(newSlide);
     updateSlideNumberDisplay();
@@ -37,7 +40,10 @@ function navigateSlide(direction) {
 
 
 
+
 function renderSlide(slide) {
+    if (!slide) return;  // Exit if slide is undefined or null
+
     // Clear the canvas
     paper.project.clear();
 
@@ -47,6 +53,8 @@ function renderSlide(slide) {
         raster.position = paper.view.center;  // center the image
         raster.size = paper.view.size;  // resize to fit the view
     }
+
+
 
     // Display text content
     if (slide.textContent) {
@@ -71,9 +79,9 @@ function renderPathsOnSlide() {
     // Clear the canvas
     paper.project.activeLayer.removeChildren();
 
-    if (slide) {
+    if (slides[currentSlideIndex]) {
         // Iterate over the paths associated with the current slide
-        for (let pathData of slide.paths) {
+        for (let pathData of slides[currentSlideIndex].paths) {
             let path = new paper.Path();
             path.importJSON(pathData);
             // Render the path on the canvas
