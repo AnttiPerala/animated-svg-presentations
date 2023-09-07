@@ -25,16 +25,21 @@
         <button onclick="navigateSlide(-1)">Previous Slide</button>
         <button onclick="navigateSlide(1)">Next Slide</button>
 
+<!-- Input for selecting an image file -->
+<input type="file" id="bgImageInput" accept="image/*">
+<button onclick="setBackgroundImage()">Set Background Image</button>
+
+
 
     </div>
 
     <div id="slideContainer">
         <!-- The canvas and other slide elements will be inside this container -->
         <canvas id="myCanvas" resize="true" style="border:1px solid black;"></canvas>
-      </div>
+    </div>
 
-   
+   <script src="app.js"></script>
    <script src="slides.js"></script>
-    <script src="app.js"></script>
+    
 </body>
 </html>

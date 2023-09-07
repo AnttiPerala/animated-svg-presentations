@@ -2,6 +2,12 @@ paper.install(window);
 
 window.onload = function() {
     paper.setup(document.getElementById('myCanvas'));
+  // Initialize the layers
+  window.backgroundLayer = new paper.Layer();
+  window.pathsLayer = new paper.Layer();
+  paper.project.activeLayer = window.pathsLayer;  // Set the active layer to pathsLayer
+  
+
 
     // Variables
     // Declare slide as a global variable
