@@ -14,9 +14,11 @@ canvas {
     flex: 1; /* This will make the canvas take the rest of the available space */
 }
 
-#canvasContainer {
+#slideContainer {
     width: 100vw;
     height: 100vh;
     background-size: cover;
     background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
 }

@@ -7,7 +7,10 @@ window.onload = function() {
   window.pathsLayer = new paper.Layer();
   paper.project.activeLayer = window.pathsLayer;  // Set the active layer to pathsLayer
   
-
+  // Initialize with one slide if there are no slides
+  if (slides.length === 0) {
+    createNewSlide();
+}
 
     // Variables
     // Declare slide as a global variable
