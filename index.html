@@ -24,6 +24,11 @@
         <button onclick="createNewSlide()">New Slide</button>
         <button onclick="navigateSlide(-1)">Previous Slide</button>
         <button onclick="navigateSlide(1)">Next Slide</button>
+        <button onclick="saveSlideshowAsJSON()">Save Slideshow</button>
+        <input type="file" id="jsonInput" accept=".json" onchange="handleJSONInput(event)">
+<button onclick="restoreSlideshowFromJSON()">Restore Slideshow</button>
+
+
 
 <!-- Input for selecting an image file -->
 <input type="file" id="bgImageInput" accept="image/*">

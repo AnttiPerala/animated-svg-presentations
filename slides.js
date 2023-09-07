@@ -111,3 +111,46 @@ function setBackgroundImage() {
     }
 }
 
+
+/* Save  */
+
+function saveSlideshowAsJSON() {
+    const jsonString = JSON.stringify(slides);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "slideshow.json";
+    a.click();
+}
+
+/* restore */
+
+function handleJSONInput(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const importedSlides = JSON.parse(e.target.result);
+                if (Array.isArray(importedSlides)) {
+                    slides = importedSlides;
+                    currentSlideIndex = 0;
+                    renderSlide(slides[currentSlideIndex]);
+                    updateSlideNumberDisplay();
+                } else {
+                    alert("Invalid JSON structure.");
+                }
+            } catch (error) {
+                alert("Error parsing JSON.");
+            }
+        };
+        reader.readAsText(file);
+    }
+}
+
+function restoreSlideshowFromJSON() {
+    document.getElementById('jsonInput').click();
+}
+
