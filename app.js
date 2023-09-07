@@ -141,9 +141,10 @@ function clearBoundingBox() {
         let pathsToAnimate = paper.project.activeLayer.children.filter(child => 
             child instanceof paper.Path && 
             child !== animatedPath &&
+            child !== animatedPath &&  // Exclude the animated path
             (!child.data || !child.data.boundingBox)  // Ensure we don't animate bounding boxes or segment indicators
         );
-    
+        
         // Check if the path has animationSpeed defined, else set a default value
         pathsToAnimate.forEach(p => {
             if (!p.data || p.data.animationSpeed === undefined) {

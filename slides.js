@@ -154,3 +154,21 @@ function restoreSlideshowFromJSON() {
     document.getElementById('jsonInput').click();
 }
 
+window.removeBackgroundImage = function() {
+    console.log("Attempting to remove background image...");
+    console.log(slides[currentSlideIndex]);
+
+    if (currentSlideIndex !== -1) {
+        console.log("Current slide index:", currentSlideIndex);
+        if (slides[currentSlideIndex].backgroundImage) {
+            console.log("Found background image. Removing...");
+            delete slides[currentSlideIndex].backgroundImage;
+            document.getElementById('slideContainer').style.backgroundImage = '';
+            renderSlide(slides[currentSlideIndex]);
+        } else {
+            console.log("No background image found on current slide.");
+        }
+    } else {
+        console.log("No active slide.");
+    }
+};
