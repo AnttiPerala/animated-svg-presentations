@@ -137,27 +137,22 @@ function clearBoundingBox() {
         if (pathsToAnimate.length === 0) return;
         offset = 0;
         let currentPath = pathsToAnimate.shift();
-    
-        while(currentPath.data && currentPath.data.boundingBox && pathsToAnimate.length > 0) {
-            // Skip bounding boxes
-            currentPath = pathsToAnimate.shift();
-        }
         
         // Ensure the current path is not selected
         currentPath.selected = false;
-    
+        
         currentPath.strokeColor = 'transparent';
         animatedPath = new paper.Path();
         animatedPath.strokeColor = 'black';
         animatedPath.strokeWidth = currentPath.strokeWidth;
-        animatedPath.selected = false;  // Ensure the animated path is not selected
+    
+        // Use the animation speed from the path's data, or a default value if not set
+        let speed = currentPath.data && currentPath.data.animationSpeed ? currentPath.data.animationSpeed : 2;
     
         paper.view.onFrame = function(event) {
-            offset += currentPath.animationSpeed || 2;  // Use the speed from the path, or default to 2 if it's not set
+            offset += speed;
             if (offset > currentPath.length) {
                 paper.view.onFrame = null;
-                currentPath.selected = false;  // Ensure the original path remains deselected
-                animatedPath.selected = false;  // Deselect after finishing animation
                 animateNextPath(pathsToAnimate);
                 return;
             }
@@ -300,10 +295,13 @@ tool.onMouseDrag = function(event) {
     }
 
 
+    let currentAnimationSpeed;  // more descriptive name
+
     window.updateAnimationSpeed = function(value) {
+        currentAnimationSpeed = parseFloat(document.getElementById('animationSpeedInput').value);
         if (selectedPath) {
-            selectedPath.animationSpeed = parseFloat(value);
-        }
+            selectedPath.data.animationSpeed = currentAnimationSpeed;  // Store the animation speed in the path's data
+        } 
     };
     
     window.updateAnimationOrder = function(value) {
