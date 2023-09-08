@@ -12,9 +12,15 @@
     <div id="ui-container">
         <label for="thicknessSlider">Path Thickness:</label>
 <input type="range" id="thicknessSlider" min="1" max="10" value="1" onchange="setPathThickness(this.value)">
+    
+    <img id="drawTool" class="uiTool active" onclick="toggleDrawMode()" src="svg/iconmonstr-pencil-lined.svg" width="30px">
 
-        <button onclick="toggleSelectMode()">Select Mode</button>
-        <button onclick="toggleEditMode()">Edit Mode</button>
+    <img id="selectTool" class="uiTool" onclick="toggleSelectMode()" src="svg/iconmonstr-cursor-2.svg" width="30px">
+
+    <img id="editTool" class="uiTool" onclick="toggleEditMode()" src="svg/iconmonstr-chart-21.svg" width="30px">
+
+    
+
         <button onclick="simplifyPath()">Simplify Path</button>
         <button onclick="deleteSelectedPath()">Delete Path</button>
         <button onclick="saveSVG()">Save as SVG</button>

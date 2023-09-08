@@ -44,6 +44,14 @@ window.onload = function() {
     let isDragging = false;
     let pathCreated = false;  // Add this at the beginning of the window.onload function
     let isNewPath = false;
+    let pathUpdated = false;  // Flag to check if a path was updated during dragging
+    let drawMode = true;
+    let pathMoved = false;  // Flag to check if a path was moved during dragging
+    let pathUpdatedDuringDrag = false;
+    let pathMovedDuringSelect = false;
+
+
+
 
 
 
@@ -75,9 +83,14 @@ window.addEventListener('resize', function() {
             clearBoundingBox(); // Clear the bounding box when exiting select mode
             selectedPath.selected = false;
             selectedPath = null;
+            document.querySelector("#drawTool").classList.remove("active");
+        } 
+
+        if (selectMode){
+            document.querySelector("#drawTool").classList.add("active");
         }
-    }
     
+    }
  
 
     let boundingBox = null; // Variable to hold the bounding box
@@ -107,12 +120,26 @@ function clearBoundingBox() {
     // Functions for Editing
     window.toggleEditMode = function() {
         editMode = !editMode;
-        if (editMode && selectedPath) {
+        if (editMode) {
+            drawMode = false; // Disable drawMode
             showSegmentIndicators(selectedPath);
         } else {
             clearSegmentIndicators();
         }
     }
+    
+    window.toggleSelectMode = function() {
+        selectMode = !selectMode;
+        if (selectMode) {
+            drawMode = false; // Disable drawMode
+            if (selectedPath) {
+                clearBoundingBox();
+                selectedPath.selected = false;
+                selectedPath = null;
+            }
+        }
+    }
+    
 
     function showSegmentIndicators(targetPath) {
         if (targetPath) {
@@ -211,43 +238,18 @@ function clearBoundingBox() {
 tool.onMouseDown = function(event) {
     pathCreated = false;  // Reset the flag
 
-    // Check for edit mode and segment interactions
-    if (editMode && selectedPath) {
-        let segmentHitResult = selectedPath.hitTest(event.point, {
-            segments: true,
-            tolerance: 5
-        });
-        if (segmentHitResult && segmentHitResult.type === 'segment') {
-            segment = segmentHitResult.segment;
-            return;  // Exit early if we found a segment in edit mode
-        }
-    }
-
-    if (!editMode && !selectMode) {
-        isNewPath = true;  // This indicates the path is new
-        path = new paper.Path({
-            segments: [event.point],
-            strokeColor: 'black',
-            strokeWidth: pathThickness,
-            data: {
-                animationSpeed: animationSpeed,
-                animationOrder: animationOrder
-            }
-        });
-    }
-
-    // Determine if the click is within the bounding box of the selected path
-    if (selectedPath && selectedPath.bounds.contains(event.point)) {
-        initialClickPoint = event.point;  // Store the initial click point for movement calculations
-        return;  // Exit early to keep the selection and prepare for potential movement
-    }
-
     // Check for path selection or de-selection
     let hitResult = paper.project.hitTest(event.point, {
         fill: true,
         stroke: true,
         tolerance: 5
     });
+
+    // Determine if the click is within the bounding box of the selected path
+    if (selectedPath && selectedPath.bounds.contains(event.point)) {
+        initialClickPoint = event.point;  // Store the initial click point for movement calculations
+        return;  // Exit early to keep the selection and prepare for potential movement
+    }
 
     if (hitResult && hitResult.item instanceof paper.Path && !hitResult.item.data.isSegmentIndicator) {
         if (selectMode) {
@@ -265,7 +267,9 @@ tool.onMouseDown = function(event) {
             selectedPath.selected = false;
             selectedPath = null;
         }
-        if (!editMode && !selectMode) {
+        if (drawMode && !editMode && !selectMode) {
+            isNewPath = true;
+            pathCreated = true;
             path = new paper.Path({
                 segments: [event.point],
                 strokeColor: 'black',
@@ -284,13 +288,17 @@ tool.onMouseDrag = function(event) {
     isDragging = true;
 
     // Handle movement of the selected path
-    if (selectedPath && initialClickPoint) {
+    if (selectMode && selectedPath) {
+        pathMovedDuringSelect = true;  // Set the flag here
+        pathMoved = true;  // Set pathMoved to true
+        pathCreated = false;  // Reset pathCreated to false when dragging an existing path
         let moveVector = event.point.subtract(initialClickPoint);
         selectedPath.position = selectedPath.position.add(moveVector);
         showBoundingBox(selectedPath);  // Update the bounding box
         initialClickPoint = event.point;  // Update the initial click point for the next drag event
         return;  // Exit early after moving the path
     }
+
 
     // Handle segment dragging in edit mode
     if (editMode && segment) {
@@ -306,24 +314,32 @@ tool.onMouseDrag = function(event) {
     // Check if we're dragging a selected path in select mode
     if (selectMode && selectedPath && !editMode) {
         updatePathInCurrentSlide(selectedPath);
-    } else if (!editMode && !selectMode && path) {  
-        path.add(event.point);
     }
+        else if (!editMode && !selectMode && drawMode && path) {  
+            path.add(event.point);
+        }
 }
-
 
 tool.onMouseUp = function(event) {
     isDragging = false;
     initialClickPoint = null;  // Reset the initial click point after the drag operation
-    
+
     if (selectedPath) {
         updatePathInCurrentSlide(selectedPath);
     }
 
-    if (pathCreated) {
+    // Only call createNewPath if in drawMode, a path was actually created, not updated during drag, and not moved
+    if (pathCreated && drawMode && !editMode && !pathUpdatedDuringDrag && !pathMoved && !pathMovedDuringSelect) {
         createNewPath(event);
     }
+    // Reset the flags for future operations
+    pathUpdatedDuringDrag = false;
+    pathCreated = false;
+    pathMoved = false;  // Reset the pathMoved flag
+    pathMovedDuringSelect = false;  // Reset the flag
+
 }
+
 
 function setAnimationOrder() {
     if (selectedPath) {
@@ -333,6 +349,7 @@ function setAnimationOrder() {
         animationOrder = parseInt(document.getElementById('animationOrderInput').value);  
     }
 }
+
 function createNewPath(event) {
     if (currentSlideIndex !== -1 && path) {
         // Generate a unique identifier (timestamp)
@@ -351,6 +368,8 @@ function createNewPath(event) {
         // Only add the path if it doesn't already exist
         if (existingPathIndex === -1) {
             slides[currentSlideIndex].paths.push(path.exportJSON());
+        } else {
+            console.warn("Path with unique ID already exists. Skipping addition.");
         }
 
         // Render the current slide to display the new path
@@ -359,6 +378,7 @@ function createNewPath(event) {
         path = null;  // Reset the path variable
     }
 }
+
 
 
 
@@ -425,21 +445,32 @@ function createNewPath(event) {
     }
     
     function updatePathInCurrentSlide(updatedPath) {
+        pathUpdated = true;
         if (currentSlideIndex !== -1) {
-            // Find the index of the path that matches the selected path in the current slide's paths
             let pathIndex = slides[currentSlideIndex].paths.findIndex(pathData => {
                 let testPath = new paper.Path();
                 testPath.importJSON(pathData);
                 return testPath.id === updatedPath.id;
             });
-            
-            // Update the path data in the current slide's 'paths' property
+    
             if (pathIndex !== -1) {
                 slides[currentSlideIndex].paths[pathIndex] = updatedPath.exportJSON();
-            } else {
-                // If the path isn't found (which shouldn't happen but just to be safe), add it to the slide's paths
+            } else if (!isNewPath) {  // Only add if it's not a new path
                 slides[currentSlideIndex].paths.push(updatedPath.exportJSON());
             }
+        }
+    }
+    
+    
+
+    window.toggleDrawMode = function() {
+        drawMode = !drawMode;
+        if (drawMode) {
+            console.log("Draw mode activated.");
+            document.querySelector("#drawTool").classList.add("active");
+        } else {
+            console.log("Draw mode deactivated.");
+            document.querySelector("#drawTool").classList.remove("active");
         }
     }
     

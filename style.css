@@ -22,3 +22,11 @@ canvas {
     background-repeat: no-repeat;
     background-size: cover;
 }
+
+.uiTool {
+    opacity: 0.3;
+}
+
+.active {
+    opacity: 1;
+}
