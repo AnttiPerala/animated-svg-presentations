@@ -279,11 +279,16 @@ window.onload = function () {
 
             }
         }
+        console.log('mousedown paper children', paper.project.activeLayer.children);
+
     }
 
 
     tool.onMouseDrag = function (event) {
         isDragging = true;
+        console.log(paper.project.activeLayer.children);
+        console.log("onMouseUp - paper children:", paper.project.activeLayer.children.length);
+
 
         //console.log("Dragging. Current path:", path);
 
@@ -320,34 +325,29 @@ window.onload = function () {
             path.add(event.point);
         }
     }
-
     tool.onMouseUp = function (event) {
         isDragging = false;
         initialClickPoint = null;  // Reset the initial click point after the drag operation
-        isFinishedDrawing = true; // Set this flag when you finish drawing a path
-
     
-        if (selectedPath) {
-            console.log("Finished drawing. Current path before storing:", path);
-            updatePathInCurrentSlide(selectedPath);
-        }
-    
-        // If a path was drawn and not just moved, store it in the current slide
         if (drawMode && path && !pathMoved) {
             console.log("Finished drawing. Current path before storing:", path);
-
             updatePathInCurrentSlide(path);
             pathCreated = true;
+        } else if (selectedPath && path !== selectedPath) { // Ensure we're not updating the same path twice
+            console.log("Finished drawing. Current path before storing:", selectedPath);
+            updatePathInCurrentSlide(selectedPath);
+            selectedPath = null; // Clear the selectedPath
         }
-    
+        
         // Reset the flags for future operations
         pathCreated = false;
         pathMoved = false;  // Reset the pathMoved flag
         pathMovedDuringSelect = false;  // Reset the flag
         existingPathDragged = false;
-    }
     
-
+        console.log('mouseup paper children', paper.project.activeLayer.children);
+    };
+    
 
     function setAnimationOrder() {
         if (selectedPath) {
@@ -454,6 +454,8 @@ window.onload = function () {
 
     function updatePathInCurrentSlide(updatedPath) {
         console.log('Updating path in current slide', updatedPath);
+        console.log("updatePathInCurrentSlide - paper children:", paper.project.activeLayer.children.length);
+
         pathUpdated = true;
         if (currentSlideIndex !== -1) {
             let pathIndex = slides[currentSlideIndex].paths.findIndex(pathData => {
