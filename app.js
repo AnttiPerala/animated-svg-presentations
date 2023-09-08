@@ -1,5 +1,33 @@
 paper.install(window);
 
+    // Variables
+    // Declare slide as a global variable
+    let slide;
+    let tool = new Tool(slide);
+    let path;
+    let segment;
+    let editMode = false;
+    let selectMode = false;
+    let selectedPath = null;
+    let segmentIndicators = [];
+    let animatedPath;
+    let offset = 0;
+    let pathThickness = 1;  // Default thickness value, you can change this to any desired value
+    let animationSpeed = 1;
+    let animationOrder = 1;
+    let initialClickPoint = null;  // Store the initial point of mouse down for rotation
+    let isDragging = false;
+    let pathCreated = false;  // Add this at the beginning of the window.onload function
+    let isNewPath = false;
+    let pathUpdated = false;  // Flag to check if a path was updated during dragging
+    let drawMode = true;
+    let pathMoved = false;  // Flag to check if a path was moved during dragging
+    let pathUpdatedDuringDrag = false;
+    let pathMovedDuringSelect = false;
+    let existingPathDragged = false;
+
+
+
 window.onload = function() {
     paper.setup(document.getElementById('myCanvas'));
   // Initialize the layers
@@ -25,30 +53,6 @@ window.onload = function() {
     createNewSlide();
 }
 
-    // Variables
-    // Declare slide as a global variable
-    let slide;
-    let tool = new Tool(slide);
-    let path;
-    let segment;
-    let editMode = false;
-    let selectMode = false;
-    let selectedPath = null;
-    let segmentIndicators = [];
-    let animatedPath;
-    let offset = 0;
-    let pathThickness = 1;  // Default thickness value, you can change this to any desired value
-    let animationSpeed = 1;
-    let animationOrder = 1;
-    let initialClickPoint = null;  // Store the initial point of mouse down for rotation
-    let isDragging = false;
-    let pathCreated = false;  // Add this at the beginning of the window.onload function
-    let isNewPath = false;
-    let pathUpdated = false;  // Flag to check if a path was updated during dragging
-    let drawMode = true;
-    let pathMoved = false;  // Flag to check if a path was moved during dragging
-    let pathUpdatedDuringDrag = false;
-    let pathMovedDuringSelect = false;
 
 
 
@@ -77,7 +81,8 @@ window.addEventListener('resize', function() {
     
     
 
-    window.toggleSelectMode = function() {
+/*     window.toggleSelectMode = function() {
+        console.log("select tool click");
         selectMode = !selectMode;
         if (!selectMode && selectedPath) {
             clearBoundingBox(); // Clear the bounding box when exiting select mode
@@ -86,11 +91,12 @@ window.addEventListener('resize', function() {
             document.querySelector("#drawTool").classList.remove("active");
         } 
 
-        if (selectMode){
+        if (!selectMode){
+            console.log('select mode activated');
             document.querySelector("#drawTool").classList.add("active");
         }
     
-    }
+    } */
  
 
     let boundingBox = null; // Variable to hold the bounding box
@@ -131,12 +137,19 @@ function clearBoundingBox() {
     window.toggleSelectMode = function() {
         selectMode = !selectMode;
         if (selectMode) {
+            console.log("Select mode activated");
             drawMode = false; // Disable drawMode
+            document.querySelector("#drawTool").classList.remove("active");
+            document.querySelector("#selectTool").classList.add("active");
+
+
             if (selectedPath) {
                 clearBoundingBox();
                 selectedPath.selected = false;
                 selectedPath = null;
             }
+        } else {
+            document.querySelector("#selectTool").classList.remove("active");
         }
     }
     
@@ -289,14 +302,14 @@ tool.onMouseDrag = function(event) {
 
     // Handle movement of the selected path
     if (selectMode && selectedPath) {
-        pathMovedDuringSelect = true;  // Set the flag here
-        pathMoved = true;  // Set pathMoved to true
-        pathCreated = false;  // Reset pathCreated to false when dragging an existing path
+        pathMovedDuringSelect = true;
+        pathMoved = true;
+        pathCreated = false;
         let moveVector = event.point.subtract(initialClickPoint);
         selectedPath.position = selectedPath.position.add(moveVector);
-        showBoundingBox(selectedPath);  // Update the bounding box
-        initialClickPoint = event.point;  // Update the initial click point for the next drag event
-        return;  // Exit early after moving the path
+        showBoundingBox(selectedPath);
+        initialClickPoint = event.point;
+        return;
     }
 
 
@@ -329,7 +342,7 @@ tool.onMouseUp = function(event) {
     }
 
     // Only call createNewPath if in drawMode, a path was actually created, not updated during drag, and not moved
-    if (pathCreated && drawMode && !editMode && !pathUpdatedDuringDrag && !pathMoved && !pathMovedDuringSelect) {
+    if (pathCreated && drawMode && !existingPathDragged) {
         createNewPath(event);
     }
     // Reset the flags for future operations
@@ -337,6 +350,8 @@ tool.onMouseUp = function(event) {
     pathCreated = false;
     pathMoved = false;  // Reset the pathMoved flag
     pathMovedDuringSelect = false;  // Reset the flag
+    existingPathDragged = false;
+
 
 }
 
@@ -468,6 +483,7 @@ function createNewPath(event) {
         if (drawMode) {
             console.log("Draw mode activated.");
             document.querySelector("#drawTool").classList.add("active");
+            document.querySelector("#selectTool").classList.remove("active");
         } else {
             console.log("Draw mode deactivated.");
             document.querySelector("#drawTool").classList.remove("active");
