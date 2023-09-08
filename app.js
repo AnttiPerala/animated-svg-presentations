@@ -25,6 +25,7 @@ let pathMoved = false;  // Flag to check if a path was moved during dragging
 let pathMovedDuringSelect = false;
 let existingPathDragged = false;
 let boundingBox = null; // Variable to hold the bounding box
+let hitResult;
 
 
 window.onload = function () {
@@ -104,6 +105,9 @@ window.onload = function () {
             document.querySelector("#selectTool").classList.remove("active");
             document.querySelector("#editTool").classList.add("active");
             showSegmentIndicators(selectedPath);
+            console.log('editmode', editMode );
+            console.log('selectmode', selectMode );
+            console.log('drawmode', drawMode );
         } else {
             clearSegmentIndicators();
             document.querySelector("#editTool").classList.remove("active");
@@ -129,16 +133,17 @@ window.onload = function () {
         }
     }
 
-
     function showSegmentIndicators(targetPath) {
         if (targetPath) {
-            for (let seg of targetPath.segments) {
+            for (let i = 0; i < targetPath.segments.length; i++) {
+                let seg = targetPath.segments[i];
                 let indicator = new paper.Path.Circle({
                     center: seg.point,
                     radius: 5,
                     fillColor: 'red',
                     data: {
                         isSegmentIndicator: true,
+                        segmentIndex: i,  // store the segment index in the data
                         boundingBox: true  // This tags the segment indicators as bounding boxes too, to prevent their animation
                     }
                 });
@@ -146,7 +151,7 @@ window.onload = function () {
             }
         }
     }
-
+    
 
     function clearSegmentIndicators() {
         segmentIndicators.forEach(indicator => indicator.remove());
@@ -227,13 +232,32 @@ window.onload = function () {
 
     // Mouse events
     tool.onMouseDown = function (event) {
-
-        console.log("Started drawing. Current path:", path);
-
+        console.log("Mouse down detected");
+    
         pathCreated = false;  // Reset the flag
-
-        // Check for path selection or de-selection
-        let hitResult = paper.project.hitTest(event.point, {
+    
+        hitResult;
+        
+        // If in editMode, prioritize segment check
+        if (editMode) {
+            let hitOptions = {
+                segments: true,
+                stroke: true,
+                fill: true,
+                tolerance: 15
+            };
+            hitResult = paper.project.hitTest(event.point, hitOptions);
+        
+            if (hitResult && hitResult.item && hitResult.item.data.isSegmentIndicator) {
+                let segmentIndex = hitResult.item.data.segmentIndex;  // get the segment's index from the indicator's data
+                segment = selectedPath.segments[segmentIndex];  // Set the segment to the corresponding segment of the path
+                console.log("Selected segment:", segment);
+            }
+        }
+        
+    
+        // If we haven't returned by now, check for other interactions
+        hitResult = paper.project.hitTest(event.point, {
             fill: true,
             stroke: true,
             tolerance: 5
@@ -244,6 +268,8 @@ window.onload = function () {
             initialClickPoint = event.point;  // Store the initial click point for movement calculations
             return;  // Exit early to keep the selection and prepare for potential movement
         }
+
+
 
         if (hitResult && hitResult.item instanceof paper.Path && !hitResult.item.data.isSegmentIndicator) { //clicked on path
             if (selectMode) {
@@ -283,18 +309,37 @@ window.onload = function () {
 
     }
 
-
     tool.onMouseDrag = function (event) {
         isDragging = true;
-        console.log(paper.project.activeLayer.children);
-        console.log("onMouseUp - paper children:", paper.project.activeLayer.children.length);
+        console.log("onMouseDrag triggered");
+        console.log("editMode:", editMode);
+        console.log("selectMode:", selectMode);
+        console.log("drawMode:", drawMode);
+        //console.log("Selected segment:", segment);
+    
+     // Handle segment dragging in edit mode
 
+     if (editMode && segment) {
+        console.log("Dragging segment in editMode");
+    
+        segment.point = segment.point.add(event.delta);  // Adjust the segment's point
+    
+        // Check if hitResult and its properties exist before accessing them
+        if (hitResult && hitResult.item && hitResult.item.data && hitResult.item.data.segmentIndex !== undefined) {
+            // Update the corresponding segment indicator's position using its stored index
+            let indicator = segmentIndicators[hitResult.item.data.segmentIndex];
+            indicator.position = segment.point;
+        }
 
-        //console.log("Dragging. Current path:", path);
+    // Refresh the view to reflect the changes
+    paper.view.draw();
 
-
-        // Handle movement of the selected path
+    return;  // Return early to prevent other actions from happening
+}
+    
+        // Handle movement of the selected path in select mode
         if (selectMode && selectedPath) {
+            console.log("Dragging entire path in selectMode");
             pathMovedDuringSelect = true;
             pathMoved = true;
             pathCreated = false;
@@ -304,27 +349,16 @@ window.onload = function () {
             initialClickPoint = event.point;
             return;
         }
-
-
-        // Handle segment dragging in edit mode
-        if (editMode && segment) {
-            segment.point = segment.point.add(event.delta);  // Move the segment
-
-            // Update the corresponding segment indicator's position
-            let index = selectedPath.segments.indexOf(segment);
-            if (index !== -1 && segmentIndicators[index]) {
-                segmentIndicators[index].position = segment.point;
-            }
-        }
-
-        // Check if we're dragging a selected path in select mode
-        if (selectMode && selectedPath && !editMode) {
-            updatePathInCurrentSlide(selectedPath);
-        }
-        else if (drawMode) {
+    
+        // If you're in draw mode, add points to the path
+        if (drawMode) {
+            console.log("Adding points to path in drawMode");
             path.add(event.point);
         }
     }
+    
+    
+
     tool.onMouseUp = function (event) {
         isDragging = false;
         initialClickPoint = null;  // Reset the initial click point after the drag operation
@@ -333,10 +367,13 @@ window.onload = function () {
             console.log("Finished drawing. Current path before storing:", path);
             updatePathInCurrentSlide(path);
             pathCreated = true;
-        } else if (selectedPath && path !== selectedPath) { // Ensure we're not updating the same path twice
+        } else if (selectMode && selectedPath && path !== selectedPath) { 
             console.log("Finished drawing. Current path before storing:", selectedPath);
             updatePathInCurrentSlide(selectedPath);
             selectedPath = null; // Clear the selectedPath
+        } else if (editMode && segmentDragged) {
+            // Handle segment dragging logic here, if any specific logic is required on mouse up.
+            // You can also include any functions or methods you've previously used to handle segment dragging.
         }
         
         // Reset the flags for future operations
@@ -344,9 +381,11 @@ window.onload = function () {
         pathMoved = false;  // Reset the pathMoved flag
         pathMovedDuringSelect = false;  // Reset the flag
         existingPathDragged = false;
+        segmentDragged = false; // Reset the segmentDragged flag
     
         console.log('mouseup paper children', paper.project.activeLayer.children);
     };
+    
     
 
     function setAnimationOrder() {
