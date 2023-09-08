@@ -1,7 +1,5 @@
 let slides = [];
 window.currentSlideIndex = -1;
-// At the top of your slides.js file, add these global layer variables:
-
 
 
 function updateSlideNumberDisplay() {
@@ -37,7 +35,7 @@ function renderSlide(slide) {
     paper.project.clear();
 
     // Re-establish layers after clearing
-    backgroundLayer = new paper.Layer();
+
     pathsLayer = new paper.Layer();
 
     // Set background image if it exists
@@ -61,22 +59,8 @@ function renderSlide(slide) {
     }
 
     // Render paths
-    paper.project.activeLayer = pathsLayer;  // Use pathsLayer for drawing paths
     renderPathsOnSlide();
 }
-
-function renderPathsOnSlide() {
-    if (slides[currentSlideIndex] && slides[currentSlideIndex].paths) {
-        for (let pathData of slides[currentSlideIndex].paths) {
-            let path = new paper.Path();
-            path.importJSON(pathData);
-            path.onFrame = function (event) {
-                // Add animation logic if needed
-            };
-        }
-    }
-}
-
 
 function renderPathsOnSlide() {
     pathsLayer.removeChildren();
@@ -92,6 +76,21 @@ function renderPathsOnSlide() {
     }
 }
 
+
+/* function renderPathsOnSlide() {
+    pathsLayer.removeChildren();
+
+    if (slides[currentSlideIndex] && slides[currentSlideIndex].paths) {
+        for (let pathData of slides[currentSlideIndex].paths) {
+            let path = new paper.Path();
+            path.importJSON(pathData);
+            path.onFrame = function(event) {
+                // Add animation logic if needed
+            };
+        }
+    }
+}
+ */
 
 function setBackgroundImage() {
     let input = document.getElementById('bgImageInput');
