@@ -275,7 +275,7 @@ window.onload = function () {
                     }
                 });
                 isNewPath = true;  // Set the flag to true when a new path is started
-                updatePathInCurrentSlide(path);
+      
 
             }
         }
@@ -324,6 +324,8 @@ window.onload = function () {
     tool.onMouseUp = function (event) {
         isDragging = false;
         initialClickPoint = null;  // Reset the initial click point after the drag operation
+        isFinishedDrawing = true; // Set this flag when you finish drawing a path
+
     
         if (selectedPath) {
             console.log("Finished drawing. Current path before storing:", path);
@@ -460,21 +462,25 @@ window.onload = function () {
                 return testPath.id === updatedPath.id;
             });
     
+            console.log('Path index found:', pathIndex);  // Log the path index
+    
             if (pathIndex !== -1) {
                 console.log("Updating existing path");
                 slides[currentSlideIndex].paths[pathIndex] = updatedPath.exportJSON({asString: false});
+                console.log("Stored path after update:", slides[currentSlideIndex].paths[pathIndex]);  // Check the stored path after updating
             } else if (isNewPath) {  // Only add if it's a new path
                 console.log("Adding new path");
                 slides[currentSlideIndex].paths.push(updatedPath.exportJSON({asString: false}));
                 isNewPath = false;  // Reset the flag
-            }
-             else {
+                isFinishedDrawing = false;  // Reset this flag as well
+
+                console.log("Stored path after addition:", slides[currentSlideIndex].paths[slides[currentSlideIndex].paths.length - 1]);  // Check the stored path after addition
+            } else {
                 console.log('isNewPath flag is true. Not adding path.');
             }
         }
     }
     
-
 
     window.toggleDrawMode = function () {
         drawMode = !drawMode;

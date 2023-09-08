@@ -65,10 +65,22 @@ function renderSlide(slide) {
 function renderPathsOnSlide() {
     pathsLayer.removeChildren();
 
+    console.log("Rendering slide:", slides[currentSlideIndex]);  // 1. Log the slide data
+
     if (slides[currentSlideIndex] && slides[currentSlideIndex].paths) {
         for (let pathData of slides[currentSlideIndex].paths) {
+            console.log("Rendering path data:", pathData);  // 2. Log each path data before importing
+
             let path = new paper.Path();
             path.importJSON(pathData);
+            pathsLayer.addChild(path);  // Ensure the path is added to the layer
+
+            console.log("Path after import:", path);  // 3. Log the path object after importing
+
+            // Ensure the path has the necessary attributes to be visible
+            path.strokeWidth = path.strokeWidth || 1;  // Default to 1 if strokeWidth is not set
+            path.strokeColor = path.strokeColor || 'black';  // Default to black if strokeColor is not set
+
             path.onFrame = function(event) {
                 // Add animation logic if needed
             };
@@ -77,20 +89,6 @@ function renderPathsOnSlide() {
 }
 
 
-/* function renderPathsOnSlide() {
-    pathsLayer.removeChildren();
-
-    if (slides[currentSlideIndex] && slides[currentSlideIndex].paths) {
-        for (let pathData of slides[currentSlideIndex].paths) {
-            let path = new paper.Path();
-            path.importJSON(pathData);
-            path.onFrame = function(event) {
-                // Add animation logic if needed
-            };
-        }
-    }
-}
- */
 
 function setBackgroundImage() {
     let input = document.getElementById('bgImageInput');
