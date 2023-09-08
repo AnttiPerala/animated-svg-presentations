@@ -332,7 +332,11 @@ window.onload = function () {
         }
 
     // Refresh the view to reflect the changes
-    paper.view.draw();
+    
+    //paper.view.draw();
+
+    updatePathInCurrentSlide(segment.path);
+
 
     return;  // Return early to prevent other actions from happening
 }
